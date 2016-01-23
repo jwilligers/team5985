@@ -1,11 +1,13 @@
 package org.usfirst.frc.team5985.robot;
 
 import edu.wpi.first.wpilibj.IterativeRobot;
+
 //import edu.wpi.first.wpilibj.
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.RobotDrive;
 //import edu.wpi.first.wpilibj.Servo;
 import edu.wpi.first.wpilibj.Victor;
+import edu.wpi.first.wpilibj.VictorSP;
 import edu.wpi.first.wpilibj.livewindow.LiveWindow;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj.CounterBase.EncodingType;
@@ -30,9 +32,12 @@ public class Robot extends IterativeRobot {
 	//CameraServer camera2;
 	Victor driveLeft;
 	Victor driveRight;
-	DigitalInput lineSensor;	
+	VictorSP intakeMotor;
+	DigitalInput lineSensor;
+	DigitalInput intakeLimitSwitchUp;
+	DigitalInput intakeLimitSwitchDown;
 	int autoLoopCounter;
-	private boolean intakeIsUp;    //help i don't know what i'm doing i'll put this here anyways ~Zac
+	boolean intakeIsUp;    //help i don't know what i'm doing i'll put this here anyways ~Zac
 	
     /**
      * This function is run when the robot is first started up and should be
@@ -43,7 +48,10 @@ public class Robot extends IterativeRobot {
     	driveLeft = new Victor(0);
     	driveRight = new Victor(1);
     	stick = new Joystick(0);
-    	intakeEncoder = new Encoder(1,2,true,EncodingType.k4X);    //Ports 1,2 used by intake.
+    	intakeLimitSwitchUp = new DigitalInput(3);
+    	intakeLimitSwitchDown = new DigitalInput(4);
+    	intakeEncoder = new Encoder(1,2,true);    //Ports 1,2 used by intake.
+    	intakeMotor = new VictorSP(2);
 //    	servoBot = new Servo(2);
 //    	servoTop = new Servo(3);
 //    	lineSensor = new DigitalInput(0);
@@ -53,7 +61,6 @@ public class Robot extends IterativeRobot {
     	/*camera2 = CameraServer.getInstance();
     	camera2.setQuality(50);
     	camera2.startAutomaticCapture("cam1");*/
-
     }
     
     /**
@@ -65,6 +72,8 @@ public class Robot extends IterativeRobot {
     	SmartDashboard.putString("test", "Test");
     	
     	autoLoopCounter = 0;
+    	
+    	intakeEncoder.reset();
     }
 
     /**
@@ -107,7 +116,9 @@ public class Robot extends IterativeRobot {
     	
     	intake();
     	
-    	System.out.println("teleopPeriodic: Stick x = " + stick.getX() + " y = " + stick.getY());
+    	arm();
+    	
+    	//System.out.println("teleopPeriodic: Stick x = " + stick.getX() + " y = " + stick.getY());
     }
     
     /**
@@ -140,16 +151,65 @@ public class Robot extends IterativeRobot {
     private void intake()
     {
     	//Operates intake
+    	System.out.println("Intake");
     	
-    	if (stick.getRawButton(7) == true && intakeIsUp == true)
+    	boolean up = true;
+    	
+    	if (stick.getRawButton(1))
+		{
+			up = false;
+			System.out.println("stick.getRawButton(1) == True"); 	
+		}
+    	//intakeMotor.set(0.0);
+    	
+    	if (up)
+
     	{
-    		//Move motor down
-    		intakeIsUp = false;
+    		System.out.println("Up"); 	
+    		//Move up until limit switch hit
+    		if (!intakeLimitSwitchUp.get()) 
+			{
+    			intakeMotor.set(-0.4);
+        		System.out.println("Going Up");
+			}
+    		else
+    		{
+        		System.out.println("Up Limit Reached");
+        		intakeMotor.set(0.0);
+    		}
     	}
-    	else if (stick.getRawButton(8) == true && intakeIsUp == false)
+    	else
     	{
-    		//Move motor up;
-    		intakeIsUp = true;
+    		System.out.println("Down");
+        	
+    		//Move down until limit switch hit
+    		if (intakeLimitSwitchDown.get()) {
+    			intakeMotor.set(0.4); 
+        		System.out.println("Going Down");
+    		}
+    		else
+    		{
+        		System.out.println("Down Limit Reached");
+        		intakeMotor.set(0.0); 
+    		}
+    	}
+    }
+    
+    private void arm()
+    {
+    	//Operates ar
+    	
+    	intakeMotor.set(0.0);
+    	
+    	if (stick.getRawButton(7))
+    	{
+    		//Move up until limit switch hit
+    		if (!intakeLimitSwitchUp.get()) intakeMotor.set(1.0);
+    	}
+    	else if (stick.getRawButton(8))
+    	{
+    		//Move down until limit switch hit
+    		if (!intakeLimitSwitchDown.get()) intakeMotor.set(-1.0);
     	}
     }
 }
